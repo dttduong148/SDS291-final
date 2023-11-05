@@ -1,0 +1,60 @@
+---
+title: "final"
+format: html
+editor: visual
+---
+
+```{r, warning=F, message=F}
+library(tidyverse)
+library(reader)
+library(broom)
+library(Stat2Data)
+library(dplyr)
+```
+
+```{r}
+hfi <- read.csv("./hfi_cc_2021.csv")
+df <- hfi |> filter(year == "2019" | year == "2013") |> select(countries, ef_score, year)
+```
+
+```{r}
+emp <- read.csv("./emp.csv")
+emp2 <- emp |> filter(time == "2019" | time == "2013") |> group_by(ref_area.label) |> filter(!is.na(obs_value)) |> summarize(sum = sum(obs_value))
+```
+
+```{r}
+colnames(emp2)[1] = "countries"
+```
+
+```{r}
+merge1 <- merge(x = df, y = emp2, by = c("countries"))
+merge1 |>
+  ggplot(aes(x = sum, y = hf_score)) +
+  geom_point() +
+  scale_x_log10()
+```
+
+```{r}
+unemp <- read.csv("unemp.csv") 
+unemp2 <- unemp |> filter(time == "2019" & sex.label != "Sex: Total") |> group_by(ref_area.label) |> filter(!is.na(obs_value)) |> mutate(sum = sum(obs_value))
+unemp2 <- unemp2 |> group_by(ref_area.label, sex.label) |> mutate(sum_sex = sum(obs_value))
+colnames(unemp2)[1] = "countries"
+```
+
+```{r}
+merge2 <- merge(x = df, y = unemp2, by = "countries")
+```
+
+```{r}
+model1 <- lm(ef_score~sum*sex.label, data=merge2)
+summary(model1)
+```
+
+```{r}
+merge2 |>
+  ggplot(aes(x = sum_sex, y = ef_score, color = sex.label)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+```
+
+
